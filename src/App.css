@@ -32,7 +32,7 @@
 }
 
 .filler {
-  height: 60%;
+  height: 50%;
 }
 
 .filler_up {
@@ -52,6 +52,22 @@
   font-size: 4rem;
   font-weight: 400;
   padding: 0 5%;
+}
+
+.error_message {
+  transform: translateY(-20vw);
+  background-color: rgb(129, 9, 9);
+  width: 100%;
+  color: white;
+  transition: 0.3s all;
+}
+
+.error_message div {
+  margin: 3vw 5vw;
+}
+
+.active {
+  transform: translateY(0vw);
 }
 
 .auth_container-end {
@@ -107,6 +123,7 @@
   font-size: 1rem;
   border: none;
   border-radius: 3px;
+  transition: 0.3s all;
 }
 
 .auth h3 {
