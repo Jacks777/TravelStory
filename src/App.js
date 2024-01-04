@@ -533,24 +533,43 @@ function MainPage({
   handleLogout,
   usernameLocal,
 }) {
+  const [isTravelStoryOpen, setIsTravelStoryOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+
   return (
     <>
-      <TopBar
-        handleLogout={handleLogout}
-        profilePictureLocal={profilePictureLocal}
-      />
-      <Feed />
-      {/* <NavBar /> */}
+      {isTravelStoryOpen ? (
+        <TravelStory
+          item={selectedItem}
+          onClose={() => {
+            setIsAnimating(true);
+            setTimeout(() => {
+              setIsTravelStoryOpen(false);
+              setIsAnimating(false);
+            }, 300);
+          }}
+        />
+      ) : (
+        <>
+          <TopBar
+            handleLogout={handleLogout}
+            profilePictureLocal={profilePictureLocal}
+          />
+          <Feed
+            setSelectedItem={setSelectedItem}
+            setIsTravelStoryOpen={setIsTravelStoryOpen}
+            isAnimating={isAnimating}
+            setIsAnimating={setIsAnimating}
+            selectedItem={selectedItem}
+          />
+        </>
+      )}
     </>
   );
 }
 
-function TopBar({
-  isLoggedIn,
-  profileImage,
-  handleLogout,
-  profilePictureLocal,
-}) {
+function TopBar({ isLoggedIn, handleLogout, profilePictureLocal }) {
   const [openNav, setOpenNav] = useState(false);
 
   const handleOpenNav = () => {
@@ -577,37 +596,45 @@ function TopBar({
   );
 }
 
-function Feed({}) {
+function Feed({
+  setSelectedItem,
+  setIsTravelStoryOpen,
+  isAnimating,
+  setIsAnimating,
+  selectedItem,
+}) {
   const TopMentioned = [
     {
       id: 1,
       title: "Desert Safari",
+      teaser: "Beautiful safari in the desert of Abu Dhabi",
       rating: 4,
       imagePath:
         "https://images.pexels.com/photos/2245436/pexels-photo-2245436.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-      info: "Beautiful safari in the Egyptian desert",
+      info: "Embark on a mesmerizing journey with our Desert Safari experience in the heart of the Egyptian desert. Immerse yourself in the breathtaking landscapes as you traverse the golden dunes of Abu Dhabi. This unforgettable adventure offers a perfect blend of thrill and tranquility, making it an ideal escapade for nature enthusiasts. Discover the unique flora and fauna of the region, and witness a spectacular sunset that paints the sky in hues of orange and pink. Our expert guides ensure a safe and exhilarating experience, making this safari a must-try for those seeking an extraordinary desert adventure.",
+      location: "Abu Dhabi",
     },
     {
       id: 2,
       title: "Manhattan",
+      teaser: "Explore the heart of New York City",
       rating: 3.5,
       imagePath:
         "https://images.pexels.com/photos/2260786/pexels-photo-2260786.jpeg?auto=compress&cs=tinysrgb&w=800",
-      info: "The Big Apple",
+      info: "Embark on an extraordinary journey through the iconic streets of Manhattan, immersing yourself in the vibrant culture and rich history of the Big Apple. This cityscape adventure offers a perfect blend of modern marvels and classic landmarks, providing an unforgettable experience for urban explorers. Discover the renowned skyscrapers, world-famous attractions, and the dynamic energy that defines Manhattan. Whether you're captivated by the allure of Broadway, Central Park, or the bustling Times Square, Manhattan promises a diverse and captivating exploration for every traveler.",
+      location: "New York City",
     },
     {
       id: 3,
       title: "Tokyo",
+      teaser: "Experience tradition and modernity in Tokyo",
       rating: 3,
       imagePath:
         "https://images.pexels.com/photos/3536821/pexels-photo-3536821.jpeg?auto=compress&cs=tinysrgb&w=800",
-      info: "Amazing city",
+      info: "Embark on a captivating journey through the dynamic city of Tokyo, where ancient traditions harmonize with cutting-edge technology. Immerse yourself in the vibrant culture, from historic temples to futuristic skyscrapers, and witness the unique beauty that defines Japan's capital. Explore the diverse neighborhoods, each offering its own charm and character. Indulge in exquisite cuisine, experience traditional tea ceremonies, and delve into the bustling street life of Tokyo. With its rich history and innovative spirit, Tokyo is a must-visit destination for those seeking an extraordinary blend of tradition and modernity.",
+      location: "Japan",
     },
   ];
-
-  const [isTravelStoryOpen, setIsTravelStoryOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [isAnimating, setIsAnimating] = useState(false);
 
   const handleTopFeedClick = (item) => {
     setSelectedItem(item);
@@ -615,64 +642,64 @@ function Feed({}) {
   };
 
   return (
-    <div className={`feed_container ${isAnimating ? "animate" : ""}`}>
-      {isTravelStoryOpen ? (
-        <TravelStory
-          item={selectedItem}
-          onClose={() => {
-            setIsAnimating(true);
-            setTimeout(() => {
-              setIsTravelStoryOpen(false);
-              setIsAnimating(false);
-            }, 500); // Adjust the duration based on your animation time
-          }}
-        />
-      ) : (
-        <>
-          <div className="feed_container-hero">
-            <p>Escape the ordinary</p>
-            <h2>Browse Getaways</h2>
-          </div>
-          <div className="top_feed-scroll">
-            <div className="top_feed-container">
-              {TopMentioned.map((item) => (
-                <TopFeedIndivdual
-                  key={item.id}
-                  item={item}
-                  handleTopFeedClick={() => {
-                    setIsAnimating(true);
-                    setTimeout(() => {
-                      handleTopFeedClick(item);
-                      setIsAnimating(false);
-                    }, 300); // Adjust the duration based on your animation time
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+    <div className="feed_container">
+      <div className="feed_container-hero">
+        <p>Escape the ordinary</p>
+        <h2>Browse Getaways</h2>
+      </div>
+      <div className="top_feed-scroll">
+        <div className="top_feed-container">
+          {TopMentioned.map((item) => (
+            <TopFeedIndivdual
+              selectedItem={selectedItem}
+              key={item.id}
+              isAnimating={isAnimating}
+              item={item}
+              handleTopFeedClick={() => {
+                setIsAnimating(true);
+                setSelectedItem(item); // Update the state before the animation starts
+                setTimeout(() => {
+                  setIsTravelStoryOpen(true);
+                  setIsAnimating(false);
+                }, 300); // Adjust the duration based on your animation time
+              }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
-function TopFeedIndivdual({ item, handleTopFeedClick }) {
+function TopFeedIndivdual({
+  item,
+  handleTopFeedClick,
+  isAnimating,
+  selectedItem,
+}) {
   return (
-    <div className="top_feed-box" onClick={handleTopFeedClick}>
+    <div
+      className={`top_feed-box ${
+        isAnimating && selectedItem.id === item.id ? "animation_image" : ""
+      }`}
+      onClick={() => handleTopFeedClick(item)}
+    >
       <img
-        className="top_feed-image"
+        className={`top_feed-image`}
         src={item.imagePath}
         alt="background feed"
       />
       <div className="top_feed-end">
         <h3 className="top_feed-title">{item.title}</h3>
-        <p className="top_feed-info">{item.info}</p>
+        <p className="top_feed-info">{item.teaser}</p>
       </div>
     </div>
   );
 }
 
 function TravelStory({ item, onClose }) {
+  const [tabOpen, setTabOpen] = useState(true);
+
   return (
     <div className="travelstory_container">
       <div className="travelstory_background-container">
@@ -682,10 +709,75 @@ function TravelStory({ item, onClose }) {
           alt={item.title}
         />
       </div>
-      <div className="travelstory_container-info">
-        <h2>{item.title}</h2>
+      <div className="travelstory_container-start">
+        <img
+          src="/assets/back.svg"
+          className="travelstory_container-button_back"
+          onClick={onClose}
+          alt="backButton"
+        />
 
-        <button onClick={onClose}>Close Travel Story</button>
+        <h2 className="travelstory_container-title_main">{item.title}</h2>
+      </div>
+      <div className="travelstory_container-info">
+        <div className="travelstory_container-bubble">
+          <div className="travelstory_container-bubble_start">
+            <h2>{item.title}</h2>
+            <div className="travelstory_container-location">
+              <img src="assets/location.svg" alt="location" />
+              <p>{item.location}</p>
+            </div>
+          </div>
+          <div className="travelstory_container-bubble_end">
+            <div className="bubble-price bubble_icons">
+              <img src="assets/euro.svg" alt="star" />
+              <p>489.99</p>
+            </div>
+            <div className="bubble-rate bubble_icons">
+              <img src="assets/star_full.svg" alt="star" />
+              <img src="assets/star_full.svg" alt="star" />
+              <img src="assets/star_full.svg" alt="star" />
+              <img src="assets/star_full.svg" alt="star" />
+              <img src="assets/star.svg" alt="star" />
+            </div>
+            <div className="bubble-bookmark bubble_icons">
+              <img src="assets/bookmark.svg" alt="star" />
+            </div>
+          </div>
+        </div>
+        <div className="travelstory_container-details">
+          <div className="travelstory_container-details-tabs">
+            <div
+              onClick={() => setTabOpen(true)}
+              className={`travelstory_container-details-tabs ${
+                tabOpen && "tab_active"
+              }`}
+            >
+              Place Description
+            </div>
+            <div
+              onClick={() => setTabOpen(false)}
+              className={`travelstory_container-details-tabs ${
+                !tabOpen && "tab_active"
+              }`}
+            >
+              Reviews
+            </div>
+          </div>
+
+          <div className="details_tab-container">
+            {tabOpen ? (
+              <>
+                <h3>Description</h3>
+                <p>{item.info}</p>
+              </>
+            ) : (
+              <>
+                <h3>Reviews</h3>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
