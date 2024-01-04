@@ -1,4 +1,4 @@
-BROWN=  rgba(176,159,134);
+BROWN=  #b09f86
 MUSTARD=  #f5d269
 BLACK=  rgba(0,0,0)
 WHITE=  #FFFBEF

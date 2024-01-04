@@ -130,3 +130,72 @@
   color: white;
   border-bottom: 1px solid white;
 }
+
+.finish_account {
+  height: 100%;
+  width: 100%;
+  background-color: #b09f86;
+  display: flex;
+  flex-direction: column;
+}
+
+.finish_account-top {
+  flex: 1;
+}
+
+.finish_account-top h2 {
+  font-size: 4rem;
+  padding: 5vw;
+}
+
+.finish_account-top p {
+  font-size: 1.5rem;
+  margin: 2vw 5vw;
+}
+
+.finish_account-inner {
+  margin: 0 5vw;
+  margin-bottom: 10vw;
+}
+
+.finish_account-inner p {
+  font-size: 1.5rem;
+  margin-bottom: 5vw;
+}
+
+.custom-file-upload {
+  display: inline-block;
+
+  padding: 3vw 5vw;
+  cursor: pointer;
+  color: #fff;
+  background-color: #f5d269;
+  border-radius: 5px;
+  font-size: 16px;
+}
+
+.custom-file-upload input {
+  display: none;
+}
+
+.image_upload {
+  display: flex;
+}
+
+.top_bar {
+  display: flex;
+  padding: 0vw 3vw;
+  padding-top: 5vw;
+  background-color: #b09f86;
+}
+
+.top_bar-filler {
+  flex: 1;
+}
+
+.top_bar-profile_image {
+  width: 15vw;
+  height: 15vw;
+  border-radius: 50%;
+  object-fit: cover;
+}
