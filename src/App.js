@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 import {
@@ -25,13 +25,59 @@ function App() {
   const [isFinished, setIsFinished] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
 
+  const [userDataLocal, setUserDataLocal] = useState(
+    JSON.parse(localStorage.getItem("userData")) || []
+  );
+
+  useEffect(() => {
+    const storedUserData = JSON.parse(localStorage.getItem("userData"));
+    if (storedUserData !== null) {
+      setUserDataLocal(storedUserData);
+    } else {
+      // Handle the case when userData is null (e.g., user logged out)
+      setIsLoggedInLocal(false);
+      setIsFinishedLocal(false);
+      setProfilePicture(null);
+    }
+  }, [localStorage.getItem("userData")]);
+
+  useEffect(() => {
+    if (userDataLocal) {
+      setIsLoggedInLocal(userDataLocal.isLoggedIn);
+      setIsFinishedLocal(userDataLocal.isFinished);
+      setProfilePicture(userDataLocal.profilePicture);
+    }
+  }, [userDataLocal]);
+
+  const [isLoggedInLocal, setIsLoggedInLocal] = useState(
+    userDataLocal.isLoggedIn
+  );
+  const [isFinishedLocal, setIsFinishedLocal] = useState(
+    userDataLocal.isFinished
+  );
+  const [profilePicture, setProfilePicture] = useState(
+    userDataLocal.profilePicture
+  );
+
+  const handleLogout = () => {
+    console.log("clicked");
+    localStorage.removeItem("userData");
+    setIsLoggedIn(null);
+  };
+
   return (
     <div className="App">
-      {!isLoggedIn ? (
+      {!isFinishedLocal ? (
         <Intro
           setIsLoggedIn={setIsLoggedIn}
           setIsFinished={setIsFinished}
           setProfileImage={setProfileImage}
+          isLoggedIn={isLoggedIn}
+          isFinished={isFinished}
+          isLoggedInLocal={isLoggedInLocal}
+          isFinishedLocal={isFinishedLocal}
+          userDataLocal={userDataLocal}
+          setUserDataLocal={setUserDataLocal}
         />
       ) : (
         <MainPage
@@ -39,13 +85,24 @@ function App() {
           isLoggedIn={isLoggedIn}
           isFinished={isFinished}
           profileImage={profileImage}
+          handleLogout={handleLogout}
         />
       )}
     </div>
   );
 }
 
-function Intro({ setIsLoggedIn, setIsFinished, setProfileImage }) {
+function Intro({
+  setIsLoggedIn,
+  setIsFinished,
+  setProfileImage,
+  isLoggedIn,
+  isFinished,
+  isLoggedInLocal,
+  isFinishedLocal,
+  userDataLocal,
+  setUserDataLocal,
+}) {
   const [authOpen, setAuthOpen] = useState(false);
   const [error, setError] = useState("");
 
@@ -66,31 +123,46 @@ function Intro({ setIsLoggedIn, setIsFinished, setProfileImage }) {
       <div className={`error_message ${error ? "active" : ""}`}>
         <div>{error}</div>
       </div>
-      <div className={`${authOpen ? "blur" : ""}`}>
+      <div
+        className={`${authOpen ? "blur" : ""} ${
+          isLoggedInLocal ? "blurExtra" : ""
+        }`}
+      >
         <video className="background_video" autoPlay loop muted playsInline>
           <source src="/assets/background/bg.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
       </div>
 
-      <div className={`filler ${authOpen && "filler_up"}`}></div>
-      <div className="main_text">
-        <h2>Share.</h2>
-        <h2>Your.</h2>
-        <h2>Stories.</h2>
-      </div>
-      <div className={`auth_container-end ${authOpen && "auth"}`}>
-        {authOpen ? (
-          <Auth
-            setProfileImage={setProfileImage}
-            setIsFinished={setIsFinished}
-            setIsLoggedIn={setIsLoggedIn}
-            setError={setError}
-          />
-        ) : (
-          <IntroMessage handleOpenAuth={handleOpenAuth} />
-        )}
-      </div>
+      {isLoggedInLocal && !isFinishedLocal ? (
+        <FinishAccount
+          setUserDataLocal={setUserDataLocal}
+          userDataLocal={userDataLocal}
+          setIsFinished={setIsFinished}
+          isLoggedIn={isLoggedIn}
+        />
+      ) : (
+        <>
+          <div className={`filler ${authOpen && "filler_up"}`}></div>
+          <div className="main_text">
+            <h2>Share.</h2>
+            <h2>Your.</h2>
+            <h2>Stories.</h2>
+          </div>
+          <div className={`auth_container-end ${authOpen && "auth"}`}>
+            {authOpen ? (
+              <Auth
+                setProfileImage={setProfileImage}
+                setIsFinished={setIsFinished}
+                setIsLoggedIn={setIsLoggedIn}
+                setError={setError}
+              />
+            ) : (
+              <IntroMessage handleOpenAuth={handleOpenAuth} />
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -137,8 +209,21 @@ function Auth({ setError, setIsLoggedIn, setIsFinished, setProfileImage }) {
               "User Data:",
               userData
             );
+
+            const userDataLocal = {
+              userKey: userSnapshot.key,
+              username: userData.username,
+              email: userData.email,
+              profilePicture: userData.profilePicture,
+              isLoggedIn: true,
+              isFinished: userData.isFinished,
+            };
+
+            localStorage.setItem("userData", JSON.stringify(userDataLocal));
+
             setIsLoggedIn(userKey);
-            setIsFinished(userData.finished);
+            setIsFinished(userData.isFinished);
+            setError("");
             if (userData.profilePicture) {
               setProfileImage(userData.profilePicture);
             }
@@ -223,7 +308,7 @@ function Auth({ setError, setIsLoggedIn, setIsFinished, setProfileImage }) {
         username,
         email,
         password: hashedPassword,
-        finished: false,
+        isFinished: false,
       };
 
       const newPushRef = push(usersRef);
@@ -307,29 +392,29 @@ function Auth({ setError, setIsLoggedIn, setIsFinished, setProfileImage }) {
   );
 }
 
-function MainPage({ isLoggedIn, isFinished, setIsFinished, profileImage }) {
-  return (
-    <>
-      {isFinished ? (
-        <>
-          <TopBar profileImage={profileImage} />
-          <Feed />
-          <NavBar />
-        </>
-      ) : (
-        <FinishAccount setIsFinished={setIsFinished} isLoggedIn={isLoggedIn} />
-      )}
-    </>
-  );
-}
-
-function FinishAccount({ isLoggedIn, setIsFinished }) {
+function FinishAccount({
+  isLoggedIn,
+  setIsFinished,
+  userDataLocal,
+  setUserDataLocal,
+}) {
   const [profilePicture, setProfilePicture] = useState(null);
   const [bio, setBio] = useState("");
+  const [visualProfilePicture, setVisualProfilePicture] = useState(null);
 
   const handleProfilePictureChange = (e) => {
     const file = e.target.files[0];
     setProfilePicture(file);
+
+    if (file) {
+      // Read the contents of the file as a data URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        // Set the data URL as the profilePicture state
+        setVisualProfilePicture(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleUpload = async () => {
@@ -350,7 +435,7 @@ function FinishAccount({ isLoggedIn, setIsFinished }) {
       const downloadURL = await getDownloadURL(storageReference);
 
       // Get the user's key from the state
-      const userKey = isLoggedIn; // Assuming `isLoggedIn` contains the user key
+      const userKey = userDataLocal.userKey; // Assuming `isLoggedIn` contains the user key
 
       if (!userKey) {
         console.error("User key not found");
@@ -374,10 +459,24 @@ function FinishAccount({ isLoggedIn, setIsFinished }) {
         ...userData,
         profilePicture: downloadURL,
         bio,
-        finished: true,
+        isFinished: true,
+        isLoggedIn: true,
       };
 
-      setIsFinished(true);
+      // const userDataLocal = {
+      //   userKey: userSnapshot.key,
+      //   username: userData.username,
+      //   email: userData.email,
+      //   profilePicture: userData.profilePicture,
+      //   isLoggedIn: true,
+      //   isFinished: userData.finished,
+      // };
+
+      localStorage.setItem("userData", JSON.stringify(updatedUserData));
+      setUserDataLocal(updatedUserData);
+
+      // setIsFinished(true);
+      // localStorage.setItem("isFinished", true);
 
       // Set the updated data back to the database
       await dbSet(userRef, updatedUserData);
@@ -395,7 +494,11 @@ function FinishAccount({ isLoggedIn, setIsFinished }) {
         <p>And welcome to TravelStory</p>
       </div>
       <div className="finish_account-inner">
-        <p>Here you can customise your account.</p>
+        <img
+          src={visualProfilePicture || "/assets/placeholder_profile.jpg"}
+          alt="profile"
+          className="profile_picture-file"
+        />
         <div className="image_upload">
           <label className="custom-file-upload">
             <input
@@ -405,7 +508,7 @@ function FinishAccount({ isLoggedIn, setIsFinished }) {
             />
             Upload your image
           </label>
-          <text>No image selected</text>
+          <div>No image selected</div>
         </div>
         <p>Create your bio</p>
         <input value={bio} onChange={(e) => setBio(e.target.value)} />
@@ -415,10 +518,27 @@ function FinishAccount({ isLoggedIn, setIsFinished }) {
   );
 }
 
-function TopBar({ isLoggedIn, profileImage }) {
+function MainPage({
+  isLoggedIn,
+  isFinished,
+  setIsFinished,
+  profileImage,
+  handleLogout,
+}) {
+  return (
+    <>
+      <TopBar handleLogout={handleLogout} profileImage={profileImage} />
+      <Feed />
+      <NavBar />
+    </>
+  );
+}
+
+function TopBar({ isLoggedIn, profileImage, handleLogout }) {
   return (
     <div className="top_bar">
       <div className="top_bar-filler"></div>
+      <button onClick={() => handleLogout()}>Logout</button>
       <img
         className="top_bar-profile_image"
         src={profileImage ? profileImage : "no image found"}
