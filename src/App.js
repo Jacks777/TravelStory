@@ -37,7 +37,7 @@ function App() {
       // Handle the case when userData is null (e.g., user logged out)
       setIsLoggedInLocal(false);
       setIsFinishedLocal(false);
-      setProfilePicture(null);
+      setProfilePictureLocal(null);
     }
   }, [localStorage.getItem("userData")]);
 
@@ -45,7 +45,8 @@ function App() {
     if (userDataLocal) {
       setIsLoggedInLocal(userDataLocal.isLoggedIn);
       setIsFinishedLocal(userDataLocal.isFinished);
-      setProfilePicture(userDataLocal.profilePicture);
+      setProfilePictureLocal(userDataLocal.profilePicture);
+      setUsernameLocal(userDataLocal.username);
     }
   }, [userDataLocal]);
 
@@ -55,18 +56,19 @@ function App() {
   const [isFinishedLocal, setIsFinishedLocal] = useState(
     userDataLocal.isFinished
   );
-  const [profilePicture, setProfilePicture] = useState(
+  const [profilePictureLocal, setProfilePictureLocal] = useState(
     userDataLocal.profilePicture
   );
+  const [usernameLocal, setUsernameLocal] = useState(userDataLocal.username);
 
   const handleLogout = () => {
-    console.log("clicked");
+    console.log("logout function init");
     localStorage.removeItem("userData");
     setIsLoggedIn(null);
   };
 
   return (
-    <div className="App">
+    <div className={`App ${isFinishedLocal && "App_inFeed"}`}>
       {!isFinishedLocal ? (
         <Intro
           setIsLoggedIn={setIsLoggedIn}
@@ -84,7 +86,7 @@ function App() {
           setIsFinished={setIsFinished}
           isLoggedIn={isLoggedIn}
           isFinished={isFinished}
-          profileImage={profileImage}
+          profilePictureLocal={profilePictureLocal}
           handleLogout={handleLogout}
         />
       )}
@@ -338,6 +340,7 @@ function Auth({ setError, setIsLoggedIn, setIsFinished, setProfileImage }) {
         <>
           <label>Email</label>
           <input
+            value={email}
             placeholder="Please enter your email"
             onChange={(e) => setEmail(e.target.value)}
             type="email"
@@ -346,6 +349,7 @@ function Auth({ setError, setIsLoggedIn, setIsFinished, setProfileImage }) {
           />
           <label>Password</label>
           <input
+            value={password}
             placeholder="Please enter your password"
             onChange={(e) => setPassword(e.target.value)}
             type="password"
@@ -358,6 +362,7 @@ function Auth({ setError, setIsLoggedIn, setIsFinished, setProfileImage }) {
         <>
           <label>Username</label>
           <input
+            value={username}
             placeholder="Atleast 3 characters"
             onChange={(e) => setUsername(e.target.value)}
             type="text"
@@ -365,6 +370,7 @@ function Auth({ setError, setIsLoggedIn, setIsFinished, setProfileImage }) {
           />
           <label>Email</label>
           <input
+            value={email}
             placeholder="Please enter a valid email"
             onChange={(e) => setEmail(e.target.value)}
             type="email"
@@ -372,6 +378,7 @@ function Auth({ setError, setIsLoggedIn, setIsFinished, setProfileImage }) {
           />
           <label>Password</label>
           <input
+            value={password}
             placeholder="Atleast 6 characters"
             onChange={(e) => setPassword(e.target.value)}
             type="password"
@@ -522,34 +529,166 @@ function MainPage({
   isLoggedIn,
   isFinished,
   setIsFinished,
-  profileImage,
+  profilePictureLocal,
   handleLogout,
+  usernameLocal,
 }) {
   return (
     <>
-      <TopBar handleLogout={handleLogout} profileImage={profileImage} />
+      <TopBar
+        handleLogout={handleLogout}
+        profilePictureLocal={profilePictureLocal}
+      />
       <Feed />
-      <NavBar />
+      {/* <NavBar /> */}
     </>
   );
 }
 
-function TopBar({ isLoggedIn, profileImage, handleLogout }) {
+function TopBar({
+  isLoggedIn,
+  profileImage,
+  handleLogout,
+  profilePictureLocal,
+}) {
+  const [openNav, setOpenNav] = useState(false);
+
+  const handleOpenNav = () => {
+    setOpenNav(!openNav);
+  };
+
   return (
     <div className="top_bar">
+      {openNav ? (
+        <p onClick={() => handleLogout()}>Log out</p>
+      ) : (
+        <button className="top_bar-left" onClick={handleOpenNav}>
+          <img src="/assets/nav.svg" alt="pus" />
+        </button>
+      )}
+
       <div className="top_bar-filler"></div>
-      <button onClick={() => handleLogout()}>Logout</button>
       <img
         className="top_bar-profile_image"
-        src={profileImage ? profileImage : "no image found"}
+        src={profilePictureLocal ? profilePictureLocal : "no image found"}
         alt="profile"
       />
     </div>
   );
 }
 
-function Feed() {
-  return <div>Feed</div>;
+function Feed({}) {
+  const TopMentioned = [
+    {
+      id: 1,
+      title: "Desert Safari",
+      rating: 4,
+      imagePath:
+        "https://images.pexels.com/photos/2245436/pexels-photo-2245436.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
+      info: "Beautiful safari in the Egyptian desert",
+    },
+    {
+      id: 2,
+      title: "Manhattan",
+      rating: 3.5,
+      imagePath:
+        "https://images.pexels.com/photos/2260786/pexels-photo-2260786.jpeg?auto=compress&cs=tinysrgb&w=800",
+      info: "The Big Apple",
+    },
+    {
+      id: 3,
+      title: "Tokyo",
+      rating: 3,
+      imagePath:
+        "https://images.pexels.com/photos/3536821/pexels-photo-3536821.jpeg?auto=compress&cs=tinysrgb&w=800",
+      info: "Amazing city",
+    },
+  ];
+
+  const [isTravelStoryOpen, setIsTravelStoryOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const handleTopFeedClick = (item) => {
+    setSelectedItem(item);
+    setIsTravelStoryOpen(true);
+  };
+
+  return (
+    <div className={`feed_container ${isAnimating ? "animate" : ""}`}>
+      {isTravelStoryOpen ? (
+        <TravelStory
+          item={selectedItem}
+          onClose={() => {
+            setIsAnimating(true);
+            setTimeout(() => {
+              setIsTravelStoryOpen(false);
+              setIsAnimating(false);
+            }, 500); // Adjust the duration based on your animation time
+          }}
+        />
+      ) : (
+        <>
+          <div className="feed_container-hero">
+            <p>Escape the ordinary</p>
+            <h2>Browse Getaways</h2>
+          </div>
+          <div className="top_feed-scroll">
+            <div className="top_feed-container">
+              {TopMentioned.map((item) => (
+                <TopFeedIndivdual
+                  key={item.id}
+                  item={item}
+                  handleTopFeedClick={() => {
+                    setIsAnimating(true);
+                    setTimeout(() => {
+                      handleTopFeedClick(item);
+                      setIsAnimating(false);
+                    }, 300); // Adjust the duration based on your animation time
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function TopFeedIndivdual({ item, handleTopFeedClick }) {
+  return (
+    <div className="top_feed-box" onClick={handleTopFeedClick}>
+      <img
+        className="top_feed-image"
+        src={item.imagePath}
+        alt="background feed"
+      />
+      <div className="top_feed-end">
+        <h3 className="top_feed-title">{item.title}</h3>
+        <p className="top_feed-info">{item.info}</p>
+      </div>
+    </div>
+  );
+}
+
+function TravelStory({ item, onClose }) {
+  return (
+    <div className="travelstory_container">
+      <div className="travelstory_background-container">
+        <img
+          className="travelstory_background"
+          src={item.imagePath}
+          alt={item.title}
+        />
+      </div>
+      <div className="travelstory_container-info">
+        <h2>{item.title}</h2>
+
+        <button onClick={onClose}>Close Travel Story</button>
+      </div>
+    </div>
+  );
 }
 
 function NavBar() {

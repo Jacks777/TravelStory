@@ -3,6 +3,10 @@
   height: 100vh;
 }
 
+.App_inFeed {
+  min-height: 100vh;
+}
+
 .auth_container {
   width: 100%;
   height: 100%;
@@ -202,9 +206,19 @@
 
 .top_bar {
   display: flex;
-  padding: 0vw 3vw;
+  padding: 0vw 5vw;
   padding-top: 5vw;
-  background-color: #b09f86;
+}
+
+.top_bar-left {
+  width: 17vw;
+  height: 17vw;
+  border-radius: 50%;
+  object-fit: cover;
+  border: none;
+}
+
+.top_bar-left img {
 }
 
 .top_bar-filler {
@@ -212,8 +226,108 @@
 }
 
 .top_bar-profile_image {
-  width: 15vw;
-  height: 15vw;
+  width: 17vw;
+  height: 17vw;
   border-radius: 50%;
   object-fit: cover;
+}
+
+/* FEED */
+.feed_container {
+  margin-top: 10vw;
+}
+
+.feed_container-hero {
+  margin: 0 5vw;
+}
+
+.feed_container-hero p {
+  color: rgb(124, 124, 124);
+}
+
+.feed_container-hero h2 {
+  font-size: 2rem;
+}
+
+.top_feed-scroll {
+  overflow-x: auto;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.top_feed-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.top_feed-container {
+  display: flex;
+  gap: 5vw;
+  /* margin: 0 5vw; */
+  margin-top: 5vw;
+  overflow-x: auto;
+}
+
+.top_feed-box {
+  position: relative;
+  min-width: 60vw;
+  height: 90vw;
+  border-radius: 24px;
+  display: flex;
+}
+
+.top_feed-box:first-child {
+  margin-left: 5vw;
+}
+
+.top_feed-box:last-child {
+  margin-right: 5vw;
+}
+
+.top_feed-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Make sure the image covers the entire container while maintaining its aspect ratio */
+  border-radius: 24px; /* Border-radius to match the container */
+  position: absolute; /* Position absolute for proper placement within the container */
+  top: 0;
+  left: 0;
+  z-index: -1;
+}
+
+.top_feed-end {
+  align-self: flex-end;
+  margin: 0 5vw;
+  margin-bottom: 5vw;
+  color: white;
+}
+
+.top_feed-title {
+  font-weight: 600;
+}
+
+.feed_container {
+  transition: opacity 0.5s ease-in-out;
+}
+
+.feed_container.animate {
+  opacity: 0;
+}
+
+.travelstory_container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.travelstory_background {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  border-radius: 24px;
+  z-index: -1;
+}
+
+.travelstory_container-info {
+  width: 100%;
+  align-self: flex-end;
 }
