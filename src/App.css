@@ -7,6 +7,10 @@
   min-height: 100vh;
 }
 
+.App_addStory {
+  background-color: #f6f6f6;
+}
+
 .auth_container {
   width: 100%;
   height: 100%;
@@ -346,6 +350,7 @@
 .top_feed-end_rating {
   display: flex;
   align-items: center;
+  gap: 1vw;
 }
 
 .top_feed-end_rating img {
@@ -387,6 +392,22 @@
   object-fit: cover;
   border-radius: 0 0 50px 50px;
   z-index: -1;
+}
+
+.travelstory_background-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 15%;
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.2)
+  );
+
+  pointer-events: none;
 }
 
 .travelstory_container-info {
@@ -536,12 +557,11 @@
   position: absolute;
   top: 0;
   left: 0;
-  font-size: 0.8rem;
   transform: translateY(-50vh);
   transition: 0.3s all;
   background-color: #97794d;
-  width: 50vw;
-  height: 55vw;
+  width: 60vw;
+  height: 60vw;
   color: white;
   z-index: 2;
 }
@@ -611,12 +631,7 @@
 
 .addtravelstory_container-start h2 {
   color: #f5d269;
-}
-
-.addtravelstory_container-start p {
-  color: rgb(124, 124, 124);
-  font-size: 0.8rem;
-  margin-top: 3vw;
+  font-size: 2.5rem;
 }
 
 .addtravelstory_container-form {
@@ -658,7 +673,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 80vw;
+  width: 60vw !important;
 }
 
 .addtravelstory_placeholder_img {
@@ -674,8 +689,46 @@
   text-align: center;
   justify-content: center !important;
   padding: 2vw 0;
+  margin-bottom: 5vw;
 }
 
 .travelstory_image_upload-container label {
   text-align: center !important;
+  font-weight: 500;
+}
+
+.recent_feed_container {
+  width: 100%;
+  height: auto;
+}
+
+.recent_travelstory_box {
+  width: 80%;
+  margin: 0 auto;
+  display: flex;
+  gap: 5vw;
+}
+
+.recent_travelstory_box-img {
+  width: 17vw;
+  height: 17vw;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.recent_travelstory_box-title {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.recent_travelstory_box-location {
+  font-size: 1rem;
+  color: #7c7c7c;
+}
+
+.recent_travelstory_box-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1vw;
 }

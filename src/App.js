@@ -22,6 +22,9 @@ import {
 } from "firebase/storage";
 import { databaseInstance, storageInstance } from "./config";
 import AnimationComponent from "./AnimationComponent";
+import AnimationComponentClean from "./AnimationComponentClean";
+
+import imageCompression from "browser-image-compression";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState("");
@@ -438,10 +441,9 @@ function FinishAccount({
       if (!profilePicture) {
         console.error("Profile picture is null or undefined");
         setIsLoading(false);
-
         return;
       }
-
+      setIsLoading(true);
       // Upload image to Firebase Storage
       const storageReference = storageRef(
         storageInstance,
@@ -508,6 +510,8 @@ function FinishAccount({
     } catch (error) {
       console.error("Error updating profile picture and bio:", error);
       setIsLoading(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -547,7 +551,6 @@ function FinishAccount({
               className="finish_account-button"
               onClick={() => {
                 handleUpload();
-                setIsLoading(true);
               }}
             >
               Finish Account
@@ -576,13 +579,16 @@ function MainPage({
   const [price, setPrice] = useState("");
   const [information, setInformation] = useState("");
   const [image, setImage] = useState(null);
+  const [location, setLocation] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleImageChange = async (e) => {
     const selectedImage = e.target.files[0];
 
     if (selectedImage) {
+      setIsUploading(true);
       try {
         // Generate a unique identifier for the image file
         const imageFileName = `${Date.now()}-${selectedImage.name}`;
@@ -596,9 +602,13 @@ function MainPage({
 
         // Update the state with the image URL
         setImage(imageURL);
+        setIsUploading(false);
       } catch (error) {
         console.error("Error uploading image:", error);
+        setIsUploading(false);
         // Handle the error, e.g., show a message to the user
+      } finally {
+        setIsUploading(false);
       }
     }
   };
@@ -614,6 +624,7 @@ function MainPage({
       const newTravelStory = {
         title,
         price,
+        location,
         info: information,
         imagePath: image,
         user: usernameLocal,
@@ -626,6 +637,7 @@ function MainPage({
       setTitle("");
       setPrice("");
       setInformation("");
+      setLocation("");
       setImage(null);
 
       console.log("Travel story added to the database");
@@ -679,6 +691,9 @@ function MainPage({
               image={image}
               setImage={setImage}
               handleImageChange={handleImageChange}
+              setLocation={setLocation}
+              location={location}
+              isUploading={isUploading}
             />
           )}
           <NewTravelStoryButton
@@ -702,16 +717,18 @@ function AddTravelStory({
   image,
   setImage,
   handleImageChange,
+  setLocation,
+  location,
+  isUploading,
 }) {
   const handlePriceChange = (e) => {
     const input = e.target.value;
-    // Check if the input is a valid number or contains a comma
+
     if (input.length < 8) {
       if (!isNaN(input) || input === "," || input === ".") {
         setPrice(input);
       }
     }
-    // If you want to limit the number of digits or add additional validation, you can modify the condition accordingly
   };
 
   const handleTitleChange = (e) => {
@@ -725,12 +742,16 @@ function AddTravelStory({
     const input = e.target.value.slice(0, 200);
     setInformation(input);
   };
+  const handleLocationChange = (e) => {
+    // Limit information to 200 characters
+    const input = e.target.value.slice(0, 25);
+    setLocation(input);
+  };
 
   return (
     <div className="addtravelstory_container">
       <div className="addtravelstory_container-start">
         <h2>Share your TravelStory!</h2>
-        <p>Upload information about your getaway or holiday.</p>
       </div>
       <div className="addtravelstory_container-form">
         <div>
@@ -757,6 +778,14 @@ function AddTravelStory({
             placeholder="Main information"
           ></textarea>
         </div>
+        <div>
+          <label>Location</label>
+          <textarea
+            value={location}
+            onChange={handleLocationChange}
+            placeholder="UAE"
+          ></textarea>
+        </div>
         <div className="travelstory_image_upload-container">
           <input
             className="travelstory_image_upload"
@@ -768,11 +797,17 @@ function AddTravelStory({
           <label htmlFor="fileInput">Upload Image</label>
         </div>
         <div className="addtravelstory_placeholder_container">
-          <img
-            className="addtravelstory_placeholder_img"
-            src={image || "assets/placeholder_travelstory.jpg"}
-            alt="travelstory"
-          />
+          {isUploading ? (
+            <AnimationComponentClean />
+          ) : (
+            image && (
+              <img
+                className="addtravelstory_placeholder_img"
+                src={image}
+                alt="travelstory"
+              />
+            )
+          )}
         </div>
       </div>
     </div>
@@ -896,7 +931,7 @@ function Feed({
   setIsAnimating,
   selectedItem,
 }) {
-  const [topMentioned, setTopMentioned] = useState([]);
+  const [allTravelStories, setAllTravelStories] = useState([]);
 
   useEffect(() => {
     const travelstoriesRef = ref(databaseInstance, "travelstories");
@@ -910,7 +945,7 @@ function Feed({
             id: key,
             ...data[key],
           }));
-          setTopMentioned(dataArray);
+          setAllTravelStories(dataArray);
         }
       });
     };
@@ -929,32 +964,62 @@ function Feed({
       </div>
       <div className="top_feed-scroll">
         <div className="top_feed-container">
-          {topMentioned.map((item) => (
+          {allTravelStories.slice(0, 5).map((item) => (
             <TopFeedIndivdual
               selectedItem={selectedItem}
               key={item.id}
               isAnimating={isAnimating}
               item={item}
-              handleTopFeedClick={() => {
+              handleFeedClick={() => {
                 setIsAnimating(true);
-                setSelectedItem(item); // Update the state before the animation starts
+                setSelectedItem(item);
                 setTimeout(() => {
                   setIsTravelStoryOpen(true);
                   setIsAnimating(false);
-                }, 300); // Adjust the duration based on your animation time
+                }, 300);
               }}
             />
           ))}
         </div>
       </div>
-      <div>New Spots</div>
+      {allTravelStories.slice(5).map((item) => (
+        <div className="recent_feed_container" key={item.id}>
+          <RecentFeed
+            selectedItem={selectedItem}
+            isAnimating={isAnimating}
+            item={item}
+            handleFeedClick={() => {
+              setSelectedItem(item);
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RecentFeed({ item, handleFeedClick }) {
+  return (
+    <div
+      className="recent_travelstory_box"
+      onClick={() => handleFeedClick(item)}
+    >
+      <img
+        className="recent_travelstory_box-img"
+        src={item.imagePath}
+        alt="placeholder"
+      />
+      <div className="recent_travelstory_box-inner">
+        <p className="recent_travelstory_box-title">{item.title}</p>
+        <p className="recent_travelstory_box-location">{item.location}</p>
+      </div>
     </div>
   );
 }
 
 function TopFeedIndivdual({
   item,
-  handleTopFeedClick,
+  handleFeedClick,
   isAnimating,
   selectedItem,
 }) {
@@ -963,7 +1028,7 @@ function TopFeedIndivdual({
       className={`top_feed-box ${
         isAnimating && selectedItem.id === item.id ? "animation_image" : ""
       }`}
-      onClick={() => handleTopFeedClick(item)}
+      onClick={() => handleFeedClick(item)}
     >
       <div className="blur-container">
         <img
@@ -1017,7 +1082,7 @@ function TravelStory({ item, onClose }) {
           <div className="travelstory_container-bubble_end">
             <div className="bubble-price bubble_icons">
               <img src="assets/euro.svg" alt="star" />
-              <p>489.99</p>
+              <p>{item.price}</p>
             </div>
             <div className="bubble-rate bubble_icons">
               <img src="assets/star_full.svg" alt="star" />
@@ -1056,6 +1121,7 @@ function TravelStory({ item, onClose }) {
               <>
                 <h3>Description</h3>
                 <p>{item.info}</p>
+                <p>Uploaded by {item.user}</p>
               </>
             ) : (
               <>
