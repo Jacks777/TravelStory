@@ -12,6 +12,8 @@ import {
   ref,
   push,
   set,
+  onValue,
+  off,
 } from "firebase/database";
 import {
   ref as storageRef,
@@ -19,6 +21,7 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import { databaseInstance, storageInstance } from "./config";
+import AnimationComponent from "./AnimationComponent";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState("");
@@ -68,7 +71,7 @@ function App() {
   };
 
   return (
-    <div className={`App ${isFinishedLocal && "App_inFeed"}`}>
+    <div className={`App ${isFinishedLocal ? "App_inFeed" : ""}`}>
       {!isFinishedLocal ? (
         <Intro
           setIsLoggedIn={setIsLoggedIn}
@@ -80,6 +83,7 @@ function App() {
           isFinishedLocal={isFinishedLocal}
           userDataLocal={userDataLocal}
           setUserDataLocal={setUserDataLocal}
+          usernameLocal={usernameLocal}
         />
       ) : (
         <MainPage
@@ -88,6 +92,7 @@ function App() {
           isFinished={isFinished}
           profilePictureLocal={profilePictureLocal}
           handleLogout={handleLogout}
+          usernameLocal={usernameLocal}
         />
       )}
     </div>
@@ -95,6 +100,7 @@ function App() {
 }
 
 function Intro({
+  usernameLocal,
   setIsLoggedIn,
   setIsFinished,
   setProfileImage,
@@ -142,6 +148,7 @@ function Intro({
           userDataLocal={userDataLocal}
           setIsFinished={setIsFinished}
           isLoggedIn={isLoggedIn}
+          usernameLocal={usernameLocal}
         />
       ) : (
         <>
@@ -400,6 +407,7 @@ function Auth({ setError, setIsLoggedIn, setIsFinished, setProfileImage }) {
 }
 
 function FinishAccount({
+  usernameLocal,
   isLoggedIn,
   setIsFinished,
   userDataLocal,
@@ -408,6 +416,7 @@ function FinishAccount({
   const [profilePicture, setProfilePicture] = useState(null);
   const [bio, setBio] = useState("");
   const [visualProfilePicture, setVisualProfilePicture] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleProfilePictureChange = (e) => {
     const file = e.target.files[0];
@@ -428,6 +437,8 @@ function FinishAccount({
     try {
       if (!profilePicture) {
         console.error("Profile picture is null or undefined");
+        setIsLoading(false);
+
         return;
       }
 
@@ -446,6 +457,8 @@ function FinishAccount({
 
       if (!userKey) {
         console.error("User key not found");
+        setIsLoading(false);
+
         return;
       }
 
@@ -458,6 +471,8 @@ function FinishAccount({
 
       if (!userData) {
         console.error("User not found");
+        setIsLoading(false);
+
         return;
       }
 
@@ -487,41 +502,60 @@ function FinishAccount({
 
       // Set the updated data back to the database
       await dbSet(userRef, updatedUserData);
-
+      setIsLoading(false);
+      console.log("Upload done");
       console.log("Profile picture and bio updated successfully!");
     } catch (error) {
       console.error("Error updating profile picture and bio:", error);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="finish_account">
-      <div className="finish_account-top">
-        <h2>Hi!</h2>
-        <p>And welcome to TravelStory</p>
-      </div>
-      <div className="finish_account-inner">
-        <img
-          src={visualProfilePicture || "/assets/placeholder_profile.jpg"}
-          alt="profile"
-          className="profile_picture-file"
-        />
-        <div className="image_upload">
-          <label className="custom-file-upload">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleProfilePictureChange}
+    <>
+      {isLoading ? (
+        <AnimationComponent />
+      ) : (
+        <div className="finish_account">
+          <div className="finish_account-top">
+            <h2>Hi {usernameLocal}!</h2>
+            <p>To use TravelStory you need to complete your account.</p>
+          </div>
+          <div className="finish_account-inner">
+            <img
+              src={visualProfilePicture || "/assets/placeholder_profile.jpg"}
+              alt="profile"
+              className="profile_picture-file"
             />
-            Upload your image
-          </label>
-          <div>No image selected</div>
+            <div className="image_upload">
+              <label className="custom-file-upload">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfilePictureChange}
+                />
+                Upload image
+              </label>
+            </div>
+            <p>Create your bio</p>
+            <textarea
+              className="finish_account-inner_input-bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+            ></textarea>
+            <p
+              className="finish_account-button"
+              onClick={() => {
+                handleUpload();
+                setIsLoading(true);
+              }}
+            >
+              Finish Account
+            </p>
+          </div>
         </div>
-        <p>Create your bio</p>
-        <input value={bio} onChange={(e) => setBio(e.target.value)} />
-        <p onClick={handleUpload}>Upload</p>
-      </div>
-    </div>
+      )}
+    </>
   );
 }
 
@@ -536,6 +570,72 @@ function MainPage({
   const [isTravelStoryOpen, setIsTravelStoryOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  const [title, setTitle] = useState("");
+  const [price, setPrice] = useState("");
+  const [information, setInformation] = useState("");
+  const [image, setImage] = useState(null);
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleImageChange = async (e) => {
+    const selectedImage = e.target.files[0];
+
+    if (selectedImage) {
+      try {
+        // Generate a unique identifier for the image file
+        const imageFileName = `${Date.now()}-${selectedImage.name}`;
+        const imageRef = storageRef(storageInstance, `images/${imageFileName}`);
+
+        // Upload the image to Firebase Storage
+        await uploadBytes(imageRef, selectedImage);
+
+        // Get the download URL of the uploaded image
+        const imageURL = await getDownloadURL(imageRef);
+
+        // Update the state with the image URL
+        setImage(imageURL);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        // Handle the error, e.g., show a message to the user
+      }
+    }
+  };
+
+  const handleAddTravelStoryToDB = async () => {
+    try {
+      setIsLoading(true);
+
+      const travelstoriesRef = ref(databaseInstance, "travelstories");
+
+      // If you are adding a new travel story, push it to the database
+      // If you are updating an existing travel story, you might use set instead
+      const newTravelStory = {
+        title,
+        price,
+        info: information,
+        imagePath: image,
+        user: usernameLocal,
+        rating: 0,
+      };
+      const newPushRef = push(travelstoriesRef);
+      await set(newPushRef, newTravelStory);
+
+      // Reset form values after successful addition to the database
+      setTitle("");
+      setPrice("");
+      setInformation("");
+      setImage(null);
+
+      console.log("Travel story added to the database");
+      setIsLoading(false);
+      setIsSpinning(false);
+    } catch (error) {
+      setIsLoading(false);
+      console.error("Error adding travel story to the database:", error);
+    }
+  };
 
   return (
     <>
@@ -552,16 +652,39 @@ function MainPage({
         />
       ) : (
         <>
-          <TopBar
-            handleLogout={handleLogout}
-            profilePictureLocal={profilePictureLocal}
-          />
-          <Feed
-            setSelectedItem={setSelectedItem}
-            setIsTravelStoryOpen={setIsTravelStoryOpen}
-            isAnimating={isAnimating}
-            setIsAnimating={setIsAnimating}
-            selectedItem={selectedItem}
+          {!isSpinning ? (
+            <>
+              <TopBar
+                handleLogout={handleLogout}
+                profilePictureLocal={profilePictureLocal}
+              />
+              <Feed
+                setSelectedItem={setSelectedItem}
+                setIsTravelStoryOpen={setIsTravelStoryOpen}
+                isAnimating={isAnimating}
+                setIsAnimating={setIsAnimating}
+                selectedItem={selectedItem}
+              />
+            </>
+          ) : isLoading ? (
+            <AnimationComponent />
+          ) : (
+            <AddTravelStory
+              title={title}
+              setTitle={setTitle}
+              price={price}
+              setPrice={setPrice}
+              information={information}
+              setInformation={setInformation}
+              image={image}
+              setImage={setImage}
+              handleImageChange={handleImageChange}
+            />
+          )}
+          <NewTravelStoryButton
+            handleAddTravelStoryToDB={handleAddTravelStoryToDB}
+            isSpinning={isSpinning}
+            setIsSpinning={setIsSpinning}
           />
         </>
       )}
@@ -569,27 +692,197 @@ function MainPage({
   );
 }
 
+function AddTravelStory({
+  title,
+  setTitle,
+  price,
+  setPrice,
+  information,
+  setInformation,
+  image,
+  setImage,
+  handleImageChange,
+}) {
+  const handlePriceChange = (e) => {
+    const input = e.target.value;
+    // Check if the input is a valid number or contains a comma
+    if (input.length < 8) {
+      if (!isNaN(input) || input === "," || input === ".") {
+        setPrice(input);
+      }
+    }
+    // If you want to limit the number of digits or add additional validation, you can modify the condition accordingly
+  };
+
+  const handleTitleChange = (e) => {
+    // Limit title to 40 characters
+    const input = e.target.value.slice(0, 40);
+    setTitle(input);
+  };
+
+  const handleInformationChange = (e) => {
+    // Limit information to 200 characters
+    const input = e.target.value.slice(0, 200);
+    setInformation(input);
+  };
+
+  return (
+    <div className="addtravelstory_container">
+      <div className="addtravelstory_container-start">
+        <h2>Share your TravelStory!</h2>
+        <p>Upload information about your getaway or holiday.</p>
+      </div>
+      <div className="addtravelstory_container-form">
+        <div>
+          <label>Title</label>
+          <textarea
+            value={title}
+            onChange={handleTitleChange}
+            placeholder="Dubai Mall"
+          ></textarea>
+        </div>
+        <div>
+          <label>Price</label>
+          <textarea
+            value={price}
+            onChange={handlePriceChange}
+            placeholder="€49.99"
+          ></textarea>
+        </div>
+        <div>
+          <label>Information</label>
+          <textarea
+            value={information}
+            onChange={handleInformationChange}
+            placeholder="Main information"
+          ></textarea>
+        </div>
+        <div className="travelstory_image_upload-container">
+          <input
+            className="travelstory_image_upload"
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            id="fileInput"
+          />
+          <label htmlFor="fileInput">Upload Image</label>
+        </div>
+        <div className="addtravelstory_placeholder_container">
+          <img
+            className="addtravelstory_placeholder_img"
+            src={image || "assets/placeholder_travelstory.jpg"}
+            alt="travelstory"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TopBar({ isLoggedIn, handleLogout, profilePictureLocal }) {
   const [openNav, setOpenNav] = useState(false);
+  const [openHowto, setOpenHowto] = useState(false);
 
   const handleOpenNav = () => {
+    const howto_navbar = document.getElementById("howto_navbar");
+
     setOpenNav(!openNav);
+    setOpenHowto(false);
+
+    if (!openHowto) {
+      howto_navbar.classList.remove("viewed");
+    }
+  };
+
+  const handleOpenHowTo = () => {
+    const howto_navbar = document.getElementById("howto_navbar");
+
+    setOpenHowto(!openHowto);
+
+    setTimeout(() => {
+      if (!howto_navbar.classList.contains("viewed")) {
+        howto_navbar.classList.add("viewed");
+      } else {
+        howto_navbar.classList.remove("viewed");
+      }
+    }, 300);
+
+    console.log();
   };
 
   return (
     <div className="top_bar">
-      {openNav ? (
-        <p onClick={() => handleLogout()}>Log out</p>
-      ) : (
-        <button className="top_bar-left" onClick={handleOpenNav}>
-          <img src="/assets/nav.svg" alt="pus" />
-        </button>
-      )}
+      <button
+        className={`top_bar-left ${openNav ? "top_bar-left_active" : ""}`}
+        onClick={handleOpenNav}
+      >
+        <img src="/assets/nav.svg" alt="nav button" />
+      </button>
+      <div
+        className={`top_bar-navbar ${openNav ? "active_navbar" : ""} ${
+          openHowto ? "active_howto" : ""
+        }`}
+      >
+        <div>
+          <p
+            onClick={() => {
+              handleOpenNav();
+              setOpenHowto(false);
+            }}
+          >
+            X
+          </p>
+          <p
+            onClick={() => {
+              handleOpenHowTo();
+            }}
+          >
+            How to use Travelstory
+          </p>
+          {!openHowto && (
+            <>
+              <p>Contact</p>
+              <p>Mission</p>
+              <p>And more...</p>
+
+              <p onClick={() => handleLogout()}>Log out</p>
+            </>
+          )}
+        </div>
+
+        <div id="howto_navbar" className="howto_navbar">
+          {openHowto && (
+            <>
+              <h3>Sharing TravelStories</h3>
+              <p>
+                You can upload your getaways from A-Z.<br></br> Add pictures and
+                prices to let other Travelers know what to expect.
+              </p>
+              <h3>Search TravelStories</h3>
+              <p>
+                Everyone can upload getaways. You can search keywords and find
+                the getaway you're looking for! Rate the getaway or leave a
+                review to let the other Travelers know what you've experienced
+              </p>
+              <h3>Bookmark, ratings and reviews</h3>
+              <p>
+                You can bookmark any TravelStory to save it for later. You can
+                also rate them and leave a review to tell others what your
+                experiences were.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
 
       <div className="top_bar-filler"></div>
       <img
         className="top_bar-profile_image"
-        src={profilePictureLocal ? profilePictureLocal : "no image found"}
+        src={
+          profilePictureLocal
+            ? profilePictureLocal
+            : "assets/placeholder_profile.jpg"
+        }
         alt="profile"
       />
     </div>
@@ -603,43 +896,30 @@ function Feed({
   setIsAnimating,
   selectedItem,
 }) {
-  const TopMentioned = [
-    {
-      id: 1,
-      title: "Desert Safari",
-      teaser: "Beautiful safari in the desert of Abu Dhabi",
-      rating: 4,
-      imagePath:
-        "https://images.pexels.com/photos/2245436/pexels-photo-2245436.png?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-      info: "Embark on a mesmerizing journey with our Desert Safari experience in the heart of the Egyptian desert. Immerse yourself in the breathtaking landscapes as you traverse the golden dunes of Abu Dhabi. This unforgettable adventure offers a perfect blend of thrill and tranquility, making it an ideal escapade for nature enthusiasts. Discover the unique flora and fauna of the region, and witness a spectacular sunset that paints the sky in hues of orange and pink. Our expert guides ensure a safe and exhilarating experience, making this safari a must-try for those seeking an extraordinary desert adventure.",
-      location: "Abu Dhabi",
-    },
-    {
-      id: 2,
-      title: "Manhattan",
-      teaser: "Explore the heart of New York City",
-      rating: 3.5,
-      imagePath:
-        "https://images.pexels.com/photos/2260786/pexels-photo-2260786.jpeg?auto=compress&cs=tinysrgb&w=800",
-      info: "Embark on an extraordinary journey through the iconic streets of Manhattan, immersing yourself in the vibrant culture and rich history of the Big Apple. This cityscape adventure offers a perfect blend of modern marvels and classic landmarks, providing an unforgettable experience for urban explorers. Discover the renowned skyscrapers, world-famous attractions, and the dynamic energy that defines Manhattan. Whether you're captivated by the allure of Broadway, Central Park, or the bustling Times Square, Manhattan promises a diverse and captivating exploration for every traveler.",
-      location: "New York City",
-    },
-    {
-      id: 3,
-      title: "Tokyo",
-      teaser: "Experience tradition and modernity in Tokyo",
-      rating: 3,
-      imagePath:
-        "https://images.pexels.com/photos/3536821/pexels-photo-3536821.jpeg?auto=compress&cs=tinysrgb&w=800",
-      info: "Embark on a captivating journey through the dynamic city of Tokyo, where ancient traditions harmonize with cutting-edge technology. Immerse yourself in the vibrant culture, from historic temples to futuristic skyscrapers, and witness the unique beauty that defines Japan's capital. Explore the diverse neighborhoods, each offering its own charm and character. Indulge in exquisite cuisine, experience traditional tea ceremonies, and delve into the bustling street life of Tokyo. With its rich history and innovative spirit, Tokyo is a must-visit destination for those seeking an extraordinary blend of tradition and modernity.",
-      location: "Japan",
-    },
-  ];
+  const [topMentioned, setTopMentioned] = useState([]);
 
-  const handleTopFeedClick = (item) => {
-    setSelectedItem(item);
-    setIsTravelStoryOpen(true);
-  };
+  useEffect(() => {
+    const travelstoriesRef = ref(databaseInstance, "travelstories");
+
+    const fetchData = () => {
+      onValue(travelstoriesRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          // Convert the data object into an array
+          const dataArray = Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+          }));
+          setTopMentioned(dataArray);
+        }
+      });
+    };
+
+    fetchData();
+    return () => {
+      off(travelstoriesRef);
+    };
+  }, []);
 
   return (
     <div className="feed_container">
@@ -649,7 +929,7 @@ function Feed({
       </div>
       <div className="top_feed-scroll">
         <div className="top_feed-container">
-          {TopMentioned.map((item) => (
+          {topMentioned.map((item) => (
             <TopFeedIndivdual
               selectedItem={selectedItem}
               key={item.id}
@@ -667,6 +947,7 @@ function Feed({
           ))}
         </div>
       </div>
+      <div>New Spots</div>
     </div>
   );
 }
@@ -684,14 +965,19 @@ function TopFeedIndivdual({
       }`}
       onClick={() => handleTopFeedClick(item)}
     >
-      <img
-        className={`top_feed-image`}
-        src={item.imagePath}
-        alt="background feed"
-      />
+      <div className="blur-container">
+        <img
+          className={`top_feed-image`}
+          src={item.imagePath}
+          alt="background feed"
+        />
+      </div>
       <div className="top_feed-end">
         <h3 className="top_feed-title">{item.title}</h3>
-        <p className="top_feed-info">{item.teaser}</p>
+        <div className="top_feed-end_rating">
+          <img src="assets/star_front.svg" alt="full star rating" />
+          <p className="top_feed-info">{item.rating}</p>
+        </div>
       </div>
     </div>
   );
@@ -783,8 +1069,31 @@ function TravelStory({ item, onClose }) {
   );
 }
 
-function NavBar() {
-  return <div>NavBar</div>;
+function NewTravelStoryButton({
+  isSpinning,
+  setIsSpinning,
+  handleAddTravelStoryToDB,
+}) {
+  return (
+    <div className="new_travelstory_button_container">
+      <img
+        id="new_travelstory_button"
+        className={`new_travelstory_button ${isSpinning ? "button_spin" : ""}`}
+        src="assets/plus.svg"
+        alt="plus"
+        onClick={() => setIsSpinning(!isSpinning)}
+      />
+      <img
+        id="add_travelstory_button"
+        className={`add_travelstory_button ${
+          isSpinning ? "button_spin_add" : ""
+        }`}
+        src="assets/plus.svg"
+        alt="plus"
+        onClick={handleAddTravelStoryToDB}
+      />
+    </div>
+  );
 }
 
 export default App;
