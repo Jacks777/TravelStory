@@ -23,8 +23,9 @@ import {
 import { databaseInstance, storageInstance } from "./config";
 import AnimationComponent from "./AnimationComponent";
 import AnimationComponentClean from "./AnimationComponentClean";
-
-import imageCompression from "browser-image-compression";
+import { BrowserRouter as Router, Route, Routes, Link } from "react-router-dom";
+import UserProfile from "./UserProfile"; // Import your UserProfile component
+import Home from "./Home";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState("");
@@ -34,6 +35,21 @@ function App() {
   const [userDataLocal, setUserDataLocal] = useState(
     JSON.parse(localStorage.getItem("userData")) || []
   );
+
+  const [isUserProfileOpened, setIsUserProfileOpened] = useState(
+    JSON.parse(localStorage.getItem("userProfileOpen")) || false
+  );
+
+  useEffect(() => {
+    const userProfileOpenLocal = JSON.parse(
+      localStorage.getItem("userProfileOpen")
+    );
+    if (userProfileOpenLocal !== null) {
+      setIsUserProfileOpened(userProfileOpenLocal);
+    } else {
+      setIsUserProfileOpened(false);
+    }
+  }, [localStorage.getItem("userProfileOpen")]);
 
   useEffect(() => {
     const storedUserData = JSON.parse(localStorage.getItem("userData"));
@@ -73,32 +89,60 @@ function App() {
     setIsLoggedIn(null);
   };
 
+  const handleOpenUserProfile = () => {
+    if (!isUserProfileOpened) {
+      localStorage.setItem("userProfileOpen", JSON.stringify(true));
+      setIsUserProfileOpened(true);
+    } else {
+      localStorage.removeItem("userProfileOpen");
+      setIsUserProfileOpened(false);
+    }
+  };
+
   return (
-    <div className={`App ${isFinishedLocal ? "App_inFeed" : ""}`}>
-      {!isFinishedLocal ? (
-        <Intro
-          setIsLoggedIn={setIsLoggedIn}
-          setIsFinished={setIsFinished}
-          setProfileImage={setProfileImage}
-          isLoggedIn={isLoggedIn}
-          isFinished={isFinished}
-          isLoggedInLocal={isLoggedInLocal}
-          isFinishedLocal={isFinishedLocal}
-          userDataLocal={userDataLocal}
-          setUserDataLocal={setUserDataLocal}
-          usernameLocal={usernameLocal}
+    <Router>
+      <Routes>
+        <Route
+          path="/profile/:userKey"
+          element={
+            <UserProfile
+              userDataLocal={userDataLocal}
+              setIsUserProfileOpened={setIsUserProfileOpened}
+              handleOpenUserProfile={handleOpenUserProfile}
+            />
+          }
         />
-      ) : (
-        <MainPage
-          setIsFinished={setIsFinished}
-          isLoggedIn={isLoggedIn}
-          isFinished={isFinished}
-          profilePictureLocal={profilePictureLocal}
-          handleLogout={handleLogout}
-          usernameLocal={usernameLocal}
-        />
+      </Routes>
+      {!isUserProfileOpened && (
+        <div className={`App ${isFinishedLocal ? "App_inFeed" : ""}`}>
+          {!isFinishedLocal ? (
+            <Intro
+              setIsLoggedIn={setIsLoggedIn}
+              setIsFinished={setIsFinished}
+              setProfileImage={setProfileImage}
+              isLoggedIn={isLoggedIn}
+              isFinished={isFinished}
+              isLoggedInLocal={isLoggedInLocal}
+              isFinishedLocal={isFinishedLocal}
+              userDataLocal={userDataLocal}
+              setUserDataLocal={setUserDataLocal}
+              usernameLocal={usernameLocal}
+            />
+          ) : (
+            <MainPage
+              handleOpenUserProfile={handleOpenUserProfile}
+              setIsFinished={setIsFinished}
+              isLoggedIn={isLoggedIn}
+              isFinished={isFinished}
+              profilePictureLocal={profilePictureLocal}
+              handleLogout={handleLogout}
+              usernameLocal={usernameLocal}
+              userDataLocal={userDataLocal}
+            />
+          )}
+        </div>
       )}
-    </div>
+    </Router>
   );
 }
 
@@ -229,6 +273,7 @@ function Auth({ setError, setIsLoggedIn, setIsFinished, setProfileImage }) {
               profilePicture: userData.profilePicture,
               isLoggedIn: true,
               isFinished: userData.isFinished,
+              bio: userData.bio,
             };
 
             localStorage.setItem("userData", JSON.stringify(userDataLocal));
@@ -546,6 +591,7 @@ function FinishAccount({
               className="finish_account-inner_input-bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
+              maxLength={200}
             ></textarea>
             <p
               className="finish_account-button"
@@ -569,6 +615,8 @@ function MainPage({
   profilePictureLocal,
   handleLogout,
   usernameLocal,
+  userDataLocal,
+  handleOpenUserProfile,
 }) {
   const [isTravelStoryOpen, setIsTravelStoryOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -667,8 +715,10 @@ function MainPage({
           {!isSpinning ? (
             <>
               <TopBar
+                handleOpenUserProfile={handleOpenUserProfile}
                 handleLogout={handleLogout}
                 profilePictureLocal={profilePictureLocal}
+                userDataLocal={userDataLocal}
               />
               <Feed
                 setSelectedItem={setSelectedItem}
@@ -814,7 +864,13 @@ function AddTravelStory({
   );
 }
 
-function TopBar({ isLoggedIn, handleLogout, profilePictureLocal }) {
+function TopBar({
+  isLoggedIn,
+  handleLogout,
+  profilePictureLocal,
+  userDataLocal,
+  handleOpenUserProfile,
+}) {
   const [openNav, setOpenNav] = useState(false);
   const [openHowto, setOpenHowto] = useState(false);
 
@@ -911,15 +967,20 @@ function TopBar({ isLoggedIn, handleLogout, profilePictureLocal }) {
       </div>
 
       <div className="top_bar-filler"></div>
-      <img
-        className="top_bar-profile_image"
-        src={
-          profilePictureLocal
-            ? profilePictureLocal
-            : "assets/placeholder_profile.jpg"
-        }
-        alt="profile"
-      />
+      <Link
+        onClick={handleOpenUserProfile}
+        to={`/profile/${userDataLocal.userKey}`}
+      >
+        <img
+          className="top_bar-profile_image"
+          src={
+            profilePictureLocal
+              ? profilePictureLocal
+              : "assets/placeholder_profile.jpg"
+          }
+          alt="profile"
+        />
+      </Link>
     </div>
   );
 }
@@ -989,6 +1050,7 @@ function Feed({
             isAnimating={isAnimating}
             item={item}
             handleFeedClick={() => {
+              setIsTravelStoryOpen(true);
               setSelectedItem(item);
             }}
           />

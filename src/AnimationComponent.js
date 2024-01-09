@@ -52,7 +52,6 @@ const AnimationComponent = () => {
         height: "100vh",
         width: "100vw",
         flexDirection: "column",
-        backgroundColor: "#f6f6f6",
       }}
     >
       <Lottie style={{ width: "20vw" }} animationData={animationData} />
