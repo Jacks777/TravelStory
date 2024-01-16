@@ -1,6 +1,6 @@
 .App {
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
 }
 
 .App_inFeed {
@@ -699,6 +699,7 @@
 .recent_feed_container {
   width: 100%;
   height: auto;
+  margin-bottom: 5vw;
 }
 
 .recent_travelstory_box {

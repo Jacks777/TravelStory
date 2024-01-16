@@ -39,6 +39,25 @@ function App() {
   const [isUserProfileOpened, setIsUserProfileOpened] = useState(
     JSON.parse(localStorage.getItem("userProfileOpen")) || false
   );
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Function to check screen size and update state
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768); // Adjust the threshold as needed
+    };
+
+    // Initial check when the component mounts
+    checkScreenSize();
+
+    // Add event listener for window resize
+    window.addEventListener("resize", checkScreenSize);
+
+    // Cleanup: remove event listener when the component unmounts
+    return () => {
+      window.removeEventListener("resize", checkScreenSize);
+    };
+  }, []);
 
   useEffect(() => {
     const userProfileOpenLocal = JSON.parse(
@@ -99,7 +118,7 @@ function App() {
     }
   };
 
-  return (
+  return isMobile ? (
     <Router>
       <Routes>
         <Route
@@ -143,6 +162,8 @@ function App() {
         </div>
       )}
     </Router>
+  ) : (
+    <p>Please use a mobile device to use this app</p>
   );
 }
 
