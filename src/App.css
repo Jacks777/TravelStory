@@ -23,8 +23,8 @@
 .background_video {
   position: absolute;
   top: 0;
-  height: 105%;
-  transform: translateX(-20px) translateY(-2vh);
+  width: 100%;
+  /* transform: translateX(-20px) translateY(-2vh); */
 
   z-index: -5;
 }
